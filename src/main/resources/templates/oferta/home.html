@@ -1,0 +1,122 @@
+<html lang="pt-BR">
+	<head th:replace="~{base :: head}">
+	
+		<title>Pedidos</title>
+		
+	</head>
+	<body onload="onLoad()">
+		<div th:replace="~{base :: logo}"></div>
+	
+		<div class="container" id="ofertas">
+			
+			<div th:replace="~{base :: titulo('Faça sua Oferta')}"></div>
+		
+			<div class="card mt-3" v-for="pedido in pedidos">
+				
+				<div class="card-header alert-dark">{{pedido.nomeProduto}}</div>
+				
+				<div class="card-body">
+					<div class="row">
+						<div class="col-12 col-sm-8 mb-3 d-flex flex-column align-items-between flex-wrap">
+							<div class="row mt-auto mb-auto">
+								<div class="col">
+									<label for="produto">Produto:&emsp;</label><a name="produto" v-bind:href="pedido.urlProduto">{{pedido.nomeProduto}}</a>
+								</div>
+							</div>
+							<div class="row mt-auto mb-auto">
+								<div class="col">
+									<label for="descricao">Descrição:</label>
+									<div>
+										<textarea name="descricao" disabled="disabled" class="form-control">{{pedido.descricao}}</textarea>
+									</div>
+								</div>
+							</div>
+							<div class="row mt-auto mb-auto">
+								<div class="col-md-5">
+									<label for="valor">valor: </label><input v-bind:class="{'is-invalid':pedido.erros.valor !== ''}" class="form-control" name="valor" v-model="pedido.valorNegociado"/>
+									<div class="invalid-feedback" v-if="pedido.erros.valor">
+										{{pedido.erros.valor}}
+									</div>
+								</div>
+								<div class="col-md-7">
+									<label for="dtEntrega">data da entrega: </label><input v-bind:class="{'is-invalid':pedido.erros.dataDaEntrega !== ''}" name="dtEntrega" class="form-control" v-model="pedido.dataDaEntrega"/>
+									<div class="invalid-feedback" v-if="pedido.erros.dataDaEntrega">
+										{{pedido.dataDaEntrega}}
+									</div>
+								</div>
+							</div>
+							<div class="row mt-auto mb-auto">
+								<div class="col">
+									<label for="comentario">Comentário: </label>
+									<div>
+										<textarea name="comentario" class="form-control" v-model="pedido.comentario"></textarea>
+									</div>
+								</div>
+							</div>
+							<div class="row mt-auto mb-auto">
+								<div class="col d-flex justify-content-center">
+									<button v-if="pedido.ofertaEnviada" v-on:click="enviarOferta(pedido)" class="btn btn-outline-success">Oferta Enviada</button>
+									<button v-else v-on:click="enviarOferta(pedido)" class="btn btn-outline-primary">Enviar Oferta</button>
+								</div>
+							</div>
+						</div>
+						<div class="col-12 col-sm-4">
+							<div>
+								<img class="img-thumbnail" v-bind:src="pedido.urlImagem" />
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<div th:replace="~{base :: scripts}"></div>
+		<script>
+			function onLoad() {
+				var app = new Vue({
+					el: '#ofertas',
+					data: {
+						pedidos: []
+					},
+					mounted () {
+						axios
+						  .get('http://localhost:8080/api/pedidos/aguardando')
+						  .then(response => {
+							  response.data.forEach(pedido => {
+								  pedido.ofertaEnviada = false;
+								  pedido.erros = {
+										  valor: '',
+										  dataDaEntrega: ''
+								  };
+							  });
+							  this.pedidos = response.data;
+						  })
+					},
+					methods: {
+						enviarOferta: function (pedido) {
+							pedido.erros = {
+								valor: '',
+								dataDaEntrega: ''
+							};
+							axios
+								.post('http://localhost:8080/api/ofertas', {
+									pedidoId: pedido.id,
+									valor: pedido.valorNegociado,
+									dataDaEntrega: pedido.dataDaEntrega,
+									comentario: pedido.comentario
+								})
+								.then(response => pedido.ofertaEnviada = true)
+								.catch(error => {
+									error.response.data.errors.forEach(error => {
+										pedido.erros[error.field] = error.defaultMessage;
+									})
+								});
+						}
+					}
+				});
+			}
+		</script>
+		<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+		<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+	</body>
+</html>
